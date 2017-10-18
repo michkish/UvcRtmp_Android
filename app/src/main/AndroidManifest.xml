@@ -21,7 +21,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".SplashActivity"
+            android:name=".StreamActivity"
             android:launchMode="singleTask"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -32,11 +32,6 @@
         <activity
             android:name=".SettingActivity"
             android:screenOrientation="portrait"></activity>
-        <activity
-            android:name=".StreamActivity"
-            android:launchMode="singleInstance"
-            android:screenOrientation="portrait">
-        </activity>
 
         <service
             android:name=".RecordService"
@@ -48,7 +43,6 @@
         <activity
             android:name="org.easydarwin.easypusher.MediaFilesActivity"
             android:label="文件夹" />
-        <activity android:name=".AboutActivity"></activity>
     </application>
 
 </manifest>

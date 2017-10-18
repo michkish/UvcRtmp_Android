@@ -175,11 +175,6 @@ public class SettingActivity extends AppCompatActivity {
         startActivity(new Intent(this, MediaFilesActivity.class));
     }
 
-    public void onAbut(View view) {
-
-        startActivity(new Intent(this, AboutActivity.class));
-    }
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {

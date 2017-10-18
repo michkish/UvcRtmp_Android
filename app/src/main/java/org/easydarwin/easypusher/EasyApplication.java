@@ -15,6 +15,7 @@ import org.easydarwin.bus.StopRecord;
 import org.easydarwin.config.Config;
 import org.easydarwin.push.MediaStream;
 import org.easydarwin.push.MuxerModule;
+import org.easydarwin.util.CrashHandler;
 import org.easydarwin.util.Util;
 
 import java.io.File;
@@ -27,7 +28,7 @@ public class EasyApplication extends Application {
 
     public static final String KEY_ENABLE_VIDEO = "key-enable-video";
     private static EasyApplication mApplication;
-
+    private CrashHandler mCrashHandler;
 
     public static final Bus BUS = new Bus(ThreadEnforcer.ANY);
     public long mRecordingBegin;
@@ -37,6 +38,8 @@ public class EasyApplication extends Application {
     public void onCreate() {
         super.onCreate();
         mApplication = this;
+        mCrashHandler = CrashHandler.getInstance();
+        mCrashHandler.init(mApplication, getClass());
         // for compatibility
         resetDefaultServer();
         File youyuan = getFileStreamPath("SIMYOU.ttf");

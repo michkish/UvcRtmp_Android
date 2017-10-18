@@ -22,8 +22,9 @@ import android.view.TextureView;
 import android.view.WindowManager;
 
 import org.easydarwin.push.MediaStream;
+import org.easydarwin.push.UvcMediaStream;
 
-public class BackgroundCameraService extends Service implements TextureView.SurfaceTextureListener {
+public class BackgroundCameraService extends Service {
     private static final int NOTIFICATION_ID = 1;
 
     private static final String TAG = BackgroundCameraService.class.getSimpleName();
@@ -35,7 +36,7 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
     private TextureView mOutComeVideoView;
     private WindowManager mWindowManager;
     private BroadcastReceiver mReceiver = null;
-    private MediaStream mMediaStream;
+    private UvcMediaStream mMediaStream;
 
 
     // Binder given to clients
@@ -43,37 +44,11 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
     private SurfaceTexture mTexture;
     private boolean mPenddingStartPreview;
 
-    @Override
-    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-        mTexture = surface;
-        if (mPenddingStartPreview){
-            mMediaStream.setSurfaceTexture(mTexture);
-            mMediaStream.startPreview();
-            backGroundNotificate();
-        }
-    }
-
-    @Override
-    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-
-    }
-
-    @Override
-    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-        mTexture = null;
-        return true;
-    }
-
-    @Override
-    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-
-    }
-
-    public MediaStream getMediaStream() {
+    public UvcMediaStream getMediaStream() {
         return mMediaStream;
     }
 
-    public void setMediaStream(MediaStream ms) {
+    public void setMediaStream(UvcMediaStream ms) {
         mMediaStream = ms;
     }
 
@@ -81,19 +56,19 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
         mMediaStream.stopPreview();
         mPenddingStartPreview = true;
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (Settings.canDrawOverlays(this)) {
-                WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(1, 1, WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
-                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, PixelFormat.TRANSLUCENT);
-                layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
-                mWindowManager.addView(mOutComeVideoView, layoutParams);
-            }
-        }else{
-            WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(1, 1, WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, PixelFormat.TRANSLUCENT);
-            layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
-            mWindowManager.addView(mOutComeVideoView, layoutParams);
-        }
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            if (Settings.canDrawOverlays(this)) {
+//                WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(1, 1, WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
+//                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, PixelFormat.TRANSLUCENT);
+//                layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
+//                mWindowManager.addView(mOutComeVideoView, layoutParams);
+//            }
+//        }else{
+//            WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(1, 1, WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
+//                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, PixelFormat.TRANSLUCENT);
+//            layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
+//            mWindowManager.addView(mOutComeVideoView, layoutParams);
+//        }
     }
 
 
@@ -116,11 +91,11 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
 
 
     public void inActivePreview() {
-        if (mOutComeVideoView != null) {
-            if (mOutComeVideoView.getParent() != null) {
-                mWindowManager.removeView(mOutComeVideoView);
-            }
-        }
+//        if (mOutComeVideoView != null) {
+//            if (mOutComeVideoView.getParent() != null) {
+//                mWindowManager.removeView(mOutComeVideoView);
+//            }
+//        }
         stopForeground(true);
     }
 
@@ -148,8 +123,6 @@ public class BackgroundCameraService extends Service implements TextureView.Surf
         // corner and set this service as a callback
         mWindowManager = (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
         mOutComeVideoView = new TextureView(this);
-
-        mOutComeVideoView.setSurfaceTextureListener(this);
 
     }
 

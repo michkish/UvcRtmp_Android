@@ -5,11 +5,18 @@
     android:layout_height="match_parent"
     tools:context="org.easydarwin.easypusher.StreamActivity">
 
-    <TextureView
+    <com.serenegiant.usb.widget.UVCCameraTextureView
+        android:id="@+id/sv_surfaceview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"/>
+
+<!--    <TextureView
         android:id="@+id/sv_surfaceview"
         android:keepScreenOn="true"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent" />-->
 
     <LinearLayout
         android:layout_width="wrap_content"
