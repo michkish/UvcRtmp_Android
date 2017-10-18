@@ -18,6 +18,7 @@ allprojects {
     repositories {
         jcenter()
 
+        maven { url 'http://raw.github.com/saki4510t/libcommon/master/repository/' }
         maven { url "https://jitpack.io" }
     }
 }
@@ -30,4 +31,8 @@ gradle.projectsEvaluated {
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xmaxerrs" << "500" // or whatever number you want
     }
+}
+
+ext {
+    commonLibVersion= '1.5.20'
 }
