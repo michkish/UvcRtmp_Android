@@ -75,7 +75,7 @@ public class HWConsumer extends Thread implements VideoConsumer {
             if (format == ImageFormat.YV12) {
                 JNIUtil.yV12ToYUV420P(data, mWidth, mHeight);
             } else {
-                JNIUtil.nV21To420SP(data, mWidth, mHeight);
+//                JNIUtil.nV21To420SP(data, mWidth, mHeight);
             }
             int bufferIndex = mMediaCodec.dequeueInputBuffer(0);
             if (bufferIndex >= 0) {

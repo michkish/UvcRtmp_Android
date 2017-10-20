@@ -654,14 +654,14 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 					frame.position(position);
 					frame.limit(limit);
 				}
-				final MediaVideoBufferEncoder videoEncoder;
-				synchronized (mSync) {
-					videoEncoder = mVideoEncoder;
-				}
-				if (videoEncoder != null) {
-					videoEncoder.frameAvailableSoon();
-					videoEncoder.encode(frame);
-				}
+//				final MediaVideoBufferEncoder videoEncoder;
+//				synchronized (mSync) {
+//					videoEncoder = mVideoEncoder;
+//				}
+//				if (videoEncoder != null) {
+//					videoEncoder.frameAvailableSoon();
+//					videoEncoder.encode(frame);
+//				}
 			}
 		};
 
