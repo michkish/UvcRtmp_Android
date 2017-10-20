@@ -7,17 +7,15 @@ import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.usb.UsbDevice;
 import android.media.MediaCodec;
-import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Message;
-import android.os.Process;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.jiangdg.usbcamera.USBCameraManager;
 import com.serenegiant.usb.DeviceFilter;
 import com.serenegiant.usb.USBMonitor;
 import com.serenegiant.usb.common.AbstractUVCCameraHandler;
@@ -42,11 +40,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.ref.WeakReference;
+import java.nio.BufferUnderflowException;
+import java.nio.ByteBuffer;
+import java.nio.ReadOnlyBufferException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.IllegalFormatException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -77,10 +77,11 @@ public class UvcMediaStream {
     private boolean isCameraBack = true;
     private int mDgree;
     private Context mApplicationContext;
-    private boolean mSWCodec;
+    private boolean mSWCodec = false;
     private VideoConsumer mVC;
     private TxtOverlay overlay;
     private EasyMuxer mMuxer;
+    private Handler showToastHandler;
 //    private final HandlerThread mCameraThread;
 //    private final Handler mCameraThreadHandler;
     private EncoderDebugger debugger;
@@ -88,57 +89,73 @@ public class UvcMediaStream {
 
     private UVCCameraTextureView cameraView;
 
-    public UvcMediaStream(Activity activity, UVCCameraTextureView cameraView, final OnMyDevConnectListener listener) {
+    private AbstractUVCCameraHandler.PreviewCallback mPreviewCallback;
+
+    private int frameSize;
+
+    private void sendShowToast(String message) {
+        if (showToastHandler == null) return;
+        Message msg = new Message();
+        msg.what = 0;
+        msg.obj = message;
+        showToastHandler.sendMessage(msg);
+    }
+
+    public UvcMediaStream(Activity activity, final UVCCameraTextureView cameraView, final OnMyDevConnectListener listener) {
         mApplicationContext = activity.getApplicationContext();
         mSurfaceHolderRef = new WeakReference(cameraView.getSurfaceTexture());
         this.cameraView = cameraView;
         init(activity, this.cameraView, listener);
         if (EasyApplication.isRTMP())
             mEasyPusher = new EasyRTMP();
-        else mEasyPusher = new EasyPusher();
-//        mCameraThread = new HandlerThread("CAMERA"){
-//            public void run(){
-//                try{
-//                    super.run();
-//                } finally {
-//                    stopStream();
-//                    closeCamera();
-//                }
-//            }
-//        };
-//        mCameraThread.start();
-//        mCameraThreadHandler = new Handler(mCameraThread.getLooper());
+        else
+            mEasyPusher = new EasyPusher();
 
-//        if (enableVideo) {
-//            previewCallback = new Camera.PreviewCallback() {
-//
-//                @Override
-//                public void onPreviewFrame(byte[] data, Camera camera) {
-//                    if (mDgree == 0) {
-//                        Camera.CameraInfo camInfo = new Camera.CameraInfo();
-//                        Camera.getCameraInfo(mCameraId, camInfo);
-//                        int cameraRotationOffset = camInfo.orientation;
-//
-//                        if (cameraRotationOffset % 180 != 0) {
-//                            if (previewFormat == ImageFormat.YV12) {
-//                                yuvRotate(data, 0, width, height, cameraRotationOffset);
-//                            } else {
-//                                yuvRotate(data, 1, width, height, cameraRotationOffset);
-//                            }
-//                        }
-//                        save2file(data, String.format("/sdcard/yuv_%d_%d.yuv", height, width));
-//                    }
+        mDgree = 0;
+
+        previewFormat = ImageFormat.NV21;
+
+        frameSize = PREVIEW_WIDTH * PREVIEW_HEIGHT * ImageFormat.getBitsPerPixel(previewFormat) / 8;
+
+        showToastHandler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                if (msg.what == 0) {
+                    showShortMsg(msg.obj.toString());
+                }
+            }
+        };
+
+        if (mPreviewCallback == null) {
+            mPreviewCallback = new AbstractUVCCameraHandler.PreviewCallback() {
+                @Override
+                public void onPreviewFrame(ByteBuffer frame) {
+                    if (frameSize > frame.capacity()) {
+                        return;
+                    } else {
+                        frame.limit(frameSize);
+                    }
+
+                    byte[] data = new byte[frameSize];
+
+                    try {
+                        frame.get(data);
+                    } catch (IndexOutOfBoundsException e) {
+//                        showShortMsg("bytes is larger than buffer");
+                    } catch (BufferUnderflowException e) {
+//                        showShortMsg("bytes is fewer than buffer");
+                    }
+
 //                    if (PreferenceManager.getDefaultSharedPreferences(mApplicationContext).getBoolean("key_enable_video_overlay", false)) {
-//                        String txt = String.format("drawtext=fontfile=" + mApplicationContext.getFileStreamPath("SIMYOU.ttf") + ": text='%s%s':x=(w-text_w)/2:y=H-60 :fontcolor=white :box=1:boxcolor=0x00000000@0.3", "EasyPusher", new SimpleDateFormat("yyyy-MM-ddHHmmss").format(new Date()));
-//                        txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
+//                        String txt = "EasyPusher " + new SimpleDateFormat("yy-MM-dd HH:mm:ss SSS").format(new Date());
 //                        overlay.overlay(data, txt);
 //                    }
-//                    mVC.onVideo(data, previewFormat);
-//                    mCamera.addCallbackBuffer(data);
-//                }
-//
-//            };
-//        }
+
+                    mVC.onVideo(data, previewFormat);
+                }
+            };
+        }
     }
 
     public void startStream(String url, InitCallback callback) {
@@ -275,21 +292,9 @@ public class UvcMediaStream {
 //            });
 //            return;
 //        }
-        if (!cameraView.isAvailable()) {
-            throw new RuntimeException("texture view is not available");
-        }
-
-        SurfaceTexture st = cameraView.getSurfaceTexture();
-        if (st == null) {
-            throw new NullPointerException("SurfaceTexture should not be null");
-        }
-
         if (mCameraHandler != null) {
             Log.d(TAG, "start camera Preview");
-            showShortMsg("start camera Preview");
             mCameraHandler.startPreview(cameraView.getSurfaceTexture());
-
-            boolean rotate = false;
             if (Util.getSupportResolution(mApplicationContext).size() == 0) {
                 StringBuilder stringBuilder = new StringBuilder();
                 stringBuilder.append(PREVIEW_WIDTH + "x" + PREVIEW_HEIGHT).append(";");
@@ -304,18 +309,15 @@ public class UvcMediaStream {
                 } else {
                     mVC = new HWConsumer(mApplicationContext, mEasyPusher);
                 }
-                if (!rotate) {
-                    mVC.onVideoStart(PREVIEW_WIDTH, PREVIEW_HEIGHT);
-                    overlay.init(PREVIEW_WIDTH, PREVIEW_HEIGHT, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
-                } else {
-                    mVC.onVideoStart(PREVIEW_HEIGHT, PREVIEW_WIDTH);
-                    overlay.init(PREVIEW_HEIGHT, PREVIEW_WIDTH, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
-                }
+                mVC.onVideoStart(PREVIEW_WIDTH, PREVIEW_HEIGHT);
+                overlay.init(PREVIEW_WIDTH, PREVIEW_HEIGHT, mApplicationContext.getFileStreamPath("SIMYOU.ttf").getPath());
             } catch (IOException ex) {
                 ex.printStackTrace();
             } catch (IllegalArgumentException ex) {
                 ex.printStackTrace();
             }
+
+            mCameraHandler.setPreviewCallback(mPreviewCallback);
         }
         Log.d(TAG, "start Audio Record");
         audioStream = new AudioStream(mEasyPusher);
@@ -326,32 +328,6 @@ public class UvcMediaStream {
     @Nullable
     public EasyMuxer getMuxer() {
         return mMuxer;
-    }
-
-    Camera.PreviewCallback previewCallback;
-
-    /**
-     * 旋转YUV格式数据
-     *
-     * @param src    YUV数据
-     * @param format 0，420P；1，420SP
-     * @param width  宽度
-     * @param height 高度
-     * @param degree 旋转度数
-     */
-    private static void yuvRotate(byte[] src, int format, int width, int height, int degree) {
-        int offset = 0;
-        if (format == 0) {
-            JNIUtil.rotateMatrix(src, offset, width, height, degree);
-            offset += (width * height);
-            JNIUtil.rotateMatrix(src, offset, width / 2, height / 2, degree);
-            offset += width * height / 4;
-            JNIUtil.rotateMatrix(src, offset, width / 2, height / 2, degree);
-        } else if (format == 1) {
-            JNIUtil.rotateMatrix(src, offset, width, height, degree);
-            offset += width * height;
-            JNIUtil.rotateShortMatrix(src, offset, width / 2, height / 2, degree);
-        }
     }
 
     /**
@@ -368,6 +344,7 @@ public class UvcMediaStream {
 //            return;
 //        }
         if(mCameraHandler != null){
+            mCameraHandler.setPreviewCallback(null);
             mCameraHandler.stopPreview();
             Log.i(TAG,"StopPreview");
         }
@@ -453,8 +430,6 @@ public class UvcMediaStream {
             throw new NullPointerException("CameraViewInterface cannot be null!");
         mContext = activity.getApplicationContext();
 
-        showShortMsg("Usb Manager init");
-
         mUSBMonitor = new USBMonitor(activity.getApplicationContext(), new USBMonitor.OnDeviceConnectListener() {
             // 当检测到USB设备，被回调
             @Override
@@ -481,6 +456,8 @@ public class UvcMediaStream {
                     isCameraRequest = false;
                     showShortMsg(device.getDeviceName()+"已拨出");
                 }
+                stopPreview();
+                closeCamera();
                 if(listener != null){
                     listener.onDettachDev(device);
                 }
@@ -504,9 +481,6 @@ public class UvcMediaStream {
             @Override
             public void onDisconnect(UsbDevice device, USBMonitor.UsbControlBlock ctrlBlock) {
                 // 关闭摄像头
-                showShortMsg(device.getDeviceName()+"已断开");
-                stopPreview();
-                closeCamera();
                 if(listener != null){
                     listener.onDisConnectDev(device);
                 }
@@ -559,7 +533,7 @@ public class UvcMediaStream {
         }
         int count = devList.size();
         if(index >= count)
-            new IllegalArgumentException("index illegal,should be < devList.size()");
+            throw new IllegalArgumentException("index illegal,should be < devList.size()");
         if(mUSBMonitor != null) {
             mUSBMonitor.requestPermission(getUsbDeviceList().get(index));
         }
@@ -588,32 +562,40 @@ public class UvcMediaStream {
         if(mCameraHandler != null && mCameraHandler.isOpened()){
             mCameraHandler.captureStill(savePath);
         }
-    }
+    }*/
 
-    public void startRecording(String videoPath, AbstractUVCCameraHandler.OnEncodeResultListener listener){
-        if(mCameraHandler != null && ! isRecording()){
-            mCameraHandler.startRecording(videoPath,listener);
-        }
-    }
-
-    public void stopRecording(){
-        if(mCameraHandler != null && isRecording()){
-            mCameraHandler.stopRecording();
-        }
-    }
-
-    public boolean isRecording(){
+    public boolean isCameraRecording(){
         if(mCameraHandler != null){
             return mCameraHandler.isRecording();
         }
         return false;
-    }*/
+    }
 
     public boolean isCameraOpened(){
         if(mCameraHandler != null){
             return mCameraHandler.isOpened();
         }
         return false;
+    }
+
+    public void startCameraRecording(){
+        if(mCameraHandler != null && !isCameraRecording()){
+            final String videoPath = Environment.getExternalStorageDirectory().getAbsolutePath()
+                    + File.separator+System.currentTimeMillis()
+                    + SUFFIX_MP4;
+            mCameraHandler.startRecording(videoPath, new AbstractUVCCameraHandler.OnEncodeResultListener() {
+                @Override
+                public void onEncodeResult(byte[] data, int offset, int length, long timestamp, int type) {
+
+                }
+            });
+        }
+    }
+
+    public void stopCameraRecording(){
+        if(mCameraHandler != null && isCameraRecording()){
+            mCameraHandler.stopRecording();
+        }
     }
 
     /**

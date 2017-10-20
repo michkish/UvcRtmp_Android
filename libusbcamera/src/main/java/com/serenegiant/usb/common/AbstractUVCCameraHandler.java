@@ -16,6 +16,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.widget.Toast;
 
 import com.jiangdg.libusbcamera.R;
 import com.serenegiant.usb.IFrameCallback;
@@ -37,7 +38,9 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.nio.ReadOnlyBufferException;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -62,6 +65,20 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 
 	public static OnEncodeResultListener mListener;
 
+	public interface PreviewCallback {
+		void onPreviewFrame(final ByteBuffer frame);
+	}
+
+	public static PreviewCallback framePreviewCallback;
+
+	/**
+	 * set PreviewFrame Callback
+	 * @param previewCallback
+	 */
+	public void setPreviewCallback(PreviewCallback previewCallback) {
+		AbstractUVCCameraHandler.framePreviewCallback = previewCallback;
+	}
+
 	public interface OnEncodeResultListener{
 		void onEncodeResult(byte[] data, int offset, int length, long timestamp, int type);
 	}
@@ -75,12 +92,17 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 	private static final int MSG_CAPTURE_STOP = 6;
 	private static final int MSG_MEDIA_UPDATE = 7;
 	private static final int MSG_RELEASE = 9;
+	private static final int MSG_SHOW_TOAST = 10;
 
 	private final WeakReference<CameraThread> mWeakThread;
 	private volatile boolean mReleased;
 
 	protected AbstractUVCCameraHandler(final CameraThread thread) {
 		mWeakThread = new WeakReference<CameraThread>(thread);
+	}
+
+	public void showToast(String msg) {
+		Toast.makeText(mWeakThread.get().mWeakParent.get(), msg, Toast.LENGTH_SHORT).show();
 	}
 
 	public int getWidth() {
@@ -320,6 +342,9 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 		case MSG_RELEASE:
 			thread.handleRelease();
 			break;
+		case MSG_SHOW_TOAST:
+			showToast(msg.obj.toString());
+			break;
 		default:
 			throw new RuntimeException("unsupported message:what=" + msg.what);
 		}
@@ -482,6 +507,7 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 			}
 			mUVCCamera.startPreview();
 			mUVCCamera.updateCameraParams();
+            mUVCCamera.setFrameCallback(mIFrameCallback, UVCCamera.PIXEL_FORMAT_NV21);
 			synchronized (mSync) {
 				mIsPreviewing = true;
 			}
@@ -492,6 +518,7 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 			if (DEBUG) Log.v(TAG_THREAD, "handleStopPreview:");
 			if (mIsPreviewing) {
 				if (mUVCCamera != null) {
+                    mUVCCamera.setFrameCallback(null, 1);
 					mUVCCamera.stopPreview();
 				}
 				synchronized (mSync) {
@@ -533,11 +560,20 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 			}
 		}
 
+		private void showToast(String str) {
+			Message msg = new Message();
+			msg.what = MSG_SHOW_TOAST;
+			msg.obj = str;
+			getHandler().sendMessage(msg);
+		}
+
 		// 开始录制视频
 		public void handleStartRecording(String path) {
 			if (DEBUG) Log.v(TAG_THREAD, "handleStartRecording:");
 			try {
-				if ((mUVCCamera == null) || (mMuxer != null)) return;
+				if ((mUVCCamera == null) || (mMuxer != null)) {
+					return;
+				}
 //				final MediaMuxerWrapper muxer = new MediaMuxerWrapper(".mp4");	// if you record audio only, ".m4a" is also OK.
 				final MediaMuxerWrapper muxer = new MediaMuxerWrapper(path);
 				MediaVideoBufferEncoder videoEncoder = null;
@@ -555,10 +591,10 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 					break;
 				}
 				// 开启音频编码线程
-				if (true) {
-					// for audio capturing
-					new MediaAudioEncoder(muxer, mMediaEncoderListener);
-				}
+//				if (true) {
+//					// for audio capturing
+//					new MediaAudioEncoder(muxer, mMediaEncoderListener);
+//				}
 				muxer.prepare();
 				muxer.startRecording();
 				if (videoEncoder != null) {
@@ -603,6 +639,21 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 		private final IFrameCallback mIFrameCallback = new IFrameCallback() {
 			@Override
 			public void onFrame(final ByteBuffer frame) {
+				if (framePreviewCallback != null) {
+					int position = 0;
+					int limit = frame.limit();
+					/*showToast("frame position is " + position
+							+ " limit is " + frame.limit()
+							+ " capacity is " +frame.capacity());*/
+					if (frame.position() != 0) {
+						position = frame.position();
+						frame.flip();
+					}
+					framePreviewCallback.onPreviewFrame(frame);
+					frame.rewind();
+					frame.position(position);
+					frame.limit(limit);
+				}
 				final MediaVideoBufferEncoder videoEncoder;
 				synchronized (mSync) {
 					videoEncoder = mVideoEncoder;
@@ -700,7 +751,6 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 					mListener.onEncodeResult(data, offset, length, timestamp, type);
 				}
 			}
-
 		};
 
 		private void loadShutterSound(final Context context) {
