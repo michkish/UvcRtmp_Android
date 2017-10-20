@@ -100,7 +100,7 @@ public class AudioIO {
 
             int CC = AudioFormat.CHANNEL_IN_MONO;
             int minBufSize = AudioRecord.getMinBufferSize(sampleRateInHz, CC, mAudioFormat);
-            final int audioSource = MediaRecorder.AudioSource.MIC;
+            final int audioSource = MediaRecorder.AudioSource.CAMCORDER;
             // 初始化时，这个参数不是越小越好。这个参数(应该)是底层的音频buffer的尺寸，如果太小了，又读取不及时，可能会溢出，导致音质不好
             minBufSize *= 2;
             if (minBufSize < unit_length) {

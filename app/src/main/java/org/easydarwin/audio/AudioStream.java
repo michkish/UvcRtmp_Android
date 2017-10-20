@@ -79,7 +79,7 @@ public class AudioStream {
                 int len = 0, bufferIndex = 0;
                 try {
                     int bufferSize = AudioRecord.getMinBufferSize(samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-                    mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
+                    mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.CAMCORDER, samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
                     mMediaCodec = MediaCodec.createEncoderByType("audio/mp4a-latm");
                     MediaFormat format = new MediaFormat();
                     format.setString(MediaFormat.KEY_MIME, "audio/mp4a-latm");

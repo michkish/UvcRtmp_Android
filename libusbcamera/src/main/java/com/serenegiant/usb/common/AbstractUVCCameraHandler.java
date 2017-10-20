@@ -518,7 +518,7 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 			if (DEBUG) Log.v(TAG_THREAD, "handleStopPreview:");
 			if (mIsPreviewing) {
 				if (mUVCCamera != null) {
-                    mUVCCamera.setFrameCallback(null, 1);
+					mUVCCamera.setFrameCallback(null, 0);
 					mUVCCamera.stopPreview();
 				}
 				synchronized (mSync) {
