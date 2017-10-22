@@ -502,7 +502,7 @@ public class UvcMediaStream {
      * @return
      */
     public boolean isUsbMonitroRegisted() {
-        return mUSBMonitor.isRegistered();
+        return mUSBMonitor != null ? mUSBMonitor.isRegistered() : false;
     }
 
     /**
