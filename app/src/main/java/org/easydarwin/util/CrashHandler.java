@@ -145,6 +145,26 @@ public class CrashHandler implements UncaughtExceptionHandler {
 	 * @return 返回文件名称,便于将文件传送到服务器
 	 */
 	private void logError(Throwable ex) {
+		StringBuffer sb = new StringBuffer();
+//		for (Map.Entry<String, String> entry : infos.entrySet()) {
+//			String key = entry.getKey();
+//			String value = entry.getValue();
+//			sb.append(key + "=" + value + "\n");
+//		}
+		int num = ex.getStackTrace().length;
+		for (int i=0;i<num;i++){
+			sb.append(ex.getStackTrace()[i].toString());
+			sb.append("\n");
+		}
+
+		writeLog(sb.toString()+"异常："+ex.getLocalizedMessage());
+	}
+
+	/**
+	 * write logs to target file
+	 * @param logs
+	 */
+	public void writeLog(String logs) {
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			Log.w(TAG, "sdcard unmounted,skip dump exception");
 			return;
@@ -158,23 +178,11 @@ public class CrashHandler implements UncaughtExceptionHandler {
 			dir.mkdirs();
 		}
 
-		StringBuffer sb = new StringBuffer();
-//		for (Map.Entry<String, String> entry : infos.entrySet()) {
-//			String key = entry.getKey();
-//			String value = entry.getValue();
-//			sb.append(key + "=" + value + "\n");
-//		}
-		int num = ex.getStackTrace().length;
-		for (int i=0;i<num;i++){
-			sb.append(ex.getStackTrace()[i].toString());
-			sb.append("\n");
-		}
-
 		File file = new File(FolderPath + File.separator +System.currentTimeMillis()+".txt");
 		FileOutputStream fos = null;
 		try {
 			fos = new FileOutputStream(file);
-			fos.write((sb.toString()+"异常："+ex.getLocalizedMessage()).getBytes());
+			fos.write(logs.getBytes());
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

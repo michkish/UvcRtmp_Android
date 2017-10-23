@@ -28,7 +28,7 @@ public class EasyApplication extends Application {
 
     public static final String KEY_ENABLE_VIDEO = "key-enable-video";
     private static EasyApplication mApplication;
-    private CrashHandler mCrashHandler;
+    private static CrashHandler mCrashHandler;
 
     public static final Bus BUS = new Bus(ThreadEnforcer.ANY);
     public long mRecordingBegin;
@@ -83,6 +83,10 @@ public class EasyApplication extends Application {
 
     public static EasyApplication getEasyApplication() {
         return mApplication;
+    }
+
+    public static void writeLogs(String logs) {
+        mCrashHandler.writeLog(logs);
     }
 
     public void saveStringIntoPref(String key, String value) {
