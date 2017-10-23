@@ -13,9 +13,7 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.hardware.usb.UsbDevice;
-import android.media.Image;
 import android.media.projection.MediaProjectionManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -23,13 +21,11 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.preference.PreferenceManager;
-import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Surface;
-import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
@@ -40,7 +36,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.jiangdg.usbcamera.USBCameraManager;
+import com.google.gson.Gson;
+import com.serenegiant.usb.common.AbstractUVCCameraHandler;
 import com.serenegiant.usb.widget.CameraViewInterface;
 import com.serenegiant.usb.widget.UVCCameraTextureView;
 import com.squareup.otto.Subscribe;
@@ -50,9 +47,9 @@ import org.easydarwin.bus.StopRecord;
 import org.easydarwin.bus.StreamStat;
 import org.easydarwin.bus.SupportResolution;
 import org.easydarwin.easyrtmp.push.EasyRTMP;
+import org.easydarwin.model.FormatSizeArray;
 import org.easydarwin.push.EasyPusher;
 import org.easydarwin.push.InitCallback;
-import org.easydarwin.push.MediaStream;
 import org.easydarwin.push.UvcMediaStream;
 import org.easydarwin.update.UpdateMgr;
 import org.easydarwin.util.Util;
@@ -60,19 +57,18 @@ import org.easydarwin.util.Util;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.jar.Manifest;
 
 import static org.easydarwin.easypusher.EasyApplication.BUS;
 import static org.easydarwin.update.UpdateMgr.MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE;
 
-public class StreamActivity extends AppCompatActivity implements View.OnClickListener, CameraViewInterface.Callback {
+public class StreamActivity extends AppCompatActivity implements View.OnClickListener, CameraViewInterface.Callback, AbstractUVCCameraHandler.GetSupportedSizeListener {
 
     static final String TAG = "EasyPusher";
     public static final int REQUEST_MEDIA_PROJECTION = 1002;
     public static final int REQUEST_CAMERA_PERMISSION = 1003;
 
     //默认分辨率
-    int width = 640, height = 480;
+    private int width = 640, height = 480;
     Button btnSwitch;
     Button btnSetting;
     TextView txtStreamAddress;
@@ -111,6 +107,8 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
     private UVCCameraTextureView mUVCCameraView;
 
+    private ArrayAdapter<String> adapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -140,6 +138,14 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         txtStreamAddress = (TextView) findViewById(R.id.txt_stream_address);
         textRecordTick = (TextView) findViewById(R.id.tv_start_record);
         mUVCCameraView = (UVCCameraTextureView) findViewById(R.id.sv_surfaceview);
+
+/*        listResolution = new ArrayList<>();
+        listResolution.add("1920x1080");
+        listResolution.add("1280x720");
+        listResolution.add("800x480");
+        listResolution.add("680x480");
+
+        initSpninner();*/
     }
 
     @Override
@@ -427,43 +433,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         }
     };
 
-    private void initSpninner() {
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.spn_item, listResolution);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spnResolution.setAdapter(adapter);
-        int position = listResolution.indexOf(String.format("%dx%d", width, height));
-        spnResolution.setSelection(position, false);
-        spnResolution.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (mMediaStream != null && mMediaStream.isStreaming()) {
-                    int pos = listResolution.indexOf(String.format("%dx%d", width, height));
-                    if (pos == position) return;
-                    spnResolution.setSelection(pos, false);
-                    Toast.makeText(StreamActivity.this, "正在推送中,无法切换分辨率", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                String r = listResolution.get(position);
-                String[] splitR = r.split("x");
-
-                int wh = Integer.parseInt(splitR[0]);
-                int ht = Integer.parseInt(splitR[1]);
-                if (width != wh || height != ht) {
-                    width = wh;
-                    height = ht;
-                    if (mMediaStream != null) {
-                        mMediaStream.updateResolution(width, height);
-                    }
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-    }
-
     private void startCamera() {
         mMediaStream.updateResolution(width, height);
         mMediaStream.setDgree(getDgree());
@@ -653,11 +622,12 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         });
     }
 
-    @Subscribe
+/*    @Subscribe
     public void onSupportResolution(SupportResolution resolution) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                showShortMsg("start run");
                 listResolution = Util.getSupportResolution(getApplicationContext());
                 boolean supportdefault = listResolution.contains(String.format("%dx%d", width, height));
                 if (!supportdefault) {
@@ -665,9 +635,73 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                     String[] splitR = r.split("x");
                     width = Integer.parseInt(splitR[0]);
                     height = Integer.parseInt(splitR[1]);
-                }initSpninner();
+                }
+                initSpninner();
             }
         });
+    }*/
+
+    @Override
+    public void getSupportedSize(String supportedSize) {
+        Gson gson = new Gson();
+        FormatSizeArray formatSizes = gson.fromJson(supportedSize, FormatSizeArray.class);
+        if (formatSizes != null && formatSizes.getFormats() != null && formatSizes.getFormats().size() > 0) {
+            listResolution = formatSizes.getFormats().get(0).getSize();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    initSpninner();
+                }
+            });
+        }
+    }
+
+    private void initSpninner() {
+        if (adapter == null) {
+            adapter = new ArrayAdapter<String>(this, R.layout.spn_item, listResolution);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            showShortMsg("initSpninner: setAdapter");
+            try {
+                spnResolution.setAdapter(adapter);
+            } catch (IllegalArgumentException e) {
+
+            } catch (Exception e) {
+                showShortMsg(e.getMessage());
+            }
+            int position = listResolution.indexOf(String.format("%dx%d", width, height));
+            spnResolution.setSelection(position, false);
+            spnResolution.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    if (mMediaStream != null && mMediaStream.isStreaming()) {
+                        int pos = listResolution.indexOf(String.format("%dx%d", width, height));
+                        if (pos == position) return;
+                        spnResolution.setSelection(pos, false);
+                        Toast.makeText(StreamActivity.this, "正在推送中,无法切换分辨率", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String r = listResolution.get(position);
+                    String[] splitR = r.split("x");
+
+                    int wh = Integer.parseInt(splitR[0]);
+                    int ht = Integer.parseInt(splitR[1]);
+                    if (width != wh || height != ht) {
+                        width = wh;
+                        height = ht;
+                        if (mMediaStream != null) {
+                            mMediaStream.updateResolution(width, height);
+                        }
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+
+                }
+            });
+        } else {
+            adapter.notifyDataSetChanged();
+        }
     }
 
     @Override
@@ -684,7 +718,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
             }
         }
     }
-
 
     /**
      * Take care of popping the fragment back stack or finishing the activity
@@ -752,7 +785,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
             mMediaStream.registerUSB();
         }
 
-        initSpninner();
+        mMediaStream.setGetSupportedSizeListener(this);
     }
 
     /**

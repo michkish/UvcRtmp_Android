@@ -66,19 +66,18 @@ public class CrashHandler implements UncaughtExceptionHandler {
 	@Override
 	public void uncaughtException(Thread thread, Throwable ex) {
 		handleException(ex);
-//		if (mDefaultHandler != null) {
-//			// 如果用户没有处理则让系统默认的异常处理器来处理
-//			mDefaultHandler.uncaughtException(thread, ex);
-//		} else {
-//			//重启应用，释放资源
-//			System.out.println("uncaughtException--->" + ex.getMessage());
-//			logError(ex);
-//			try {
-//				Thread.sleep(3000);
-//			} catch (InterruptedException e) {
-//				Log.e("debug", "error：", e);
-//			}
-//		}
+		if (mDefaultHandler != null) {
+			// 如果用户没有处理则让系统默认的异常处理器来处理
+			mDefaultHandler.uncaughtException(thread, ex);
+		} else {
+			//重启应用，释放资源
+			System.out.println("uncaughtException--->" + ex.getMessage());
+			try {
+				Thread.sleep(3000);
+			} catch (InterruptedException e) {
+				Log.e("debug", "error：", e);
+			}
+		}
 	}
 
 	/**

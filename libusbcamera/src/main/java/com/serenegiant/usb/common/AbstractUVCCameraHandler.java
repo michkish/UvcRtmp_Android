@@ -71,12 +71,26 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 
 	public static PreviewCallback framePreviewCallback;
 
+	public interface GetSupportedSizeListener {
+		void getSupportedSize(String supportedSize);
+	}
+
+	public static GetSupportedSizeListener supportedSizeListener;
+
 	/**
 	 * set PreviewFrame Callback
 	 * @param previewCallback
 	 */
 	public void setPreviewCallback(PreviewCallback previewCallback) {
 		AbstractUVCCameraHandler.framePreviewCallback = previewCallback;
+	}
+
+	/**
+	 * set SupportedSizeListener
+	 * @param supportedSizeListener
+	 */
+	public void setGetSupportedSizeListener(GetSupportedSizeListener supportedSizeListener) {
+		AbstractUVCCameraHandler.supportedSizeListener = supportedSizeListener;
 	}
 
 	public interface OnEncodeResultListener{
@@ -93,6 +107,7 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 	private static final int MSG_MEDIA_UPDATE = 7;
 	private static final int MSG_RELEASE = 9;
 	private static final int MSG_SHOW_TOAST = 10;
+	private static final int MSG_PREVIEW_SIZE_CHANGED = 11;
 
 	private final WeakReference<CameraThread> mWeakThread;
 	private volatile boolean mReleased;
@@ -204,6 +219,19 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 		if (DEBUG) Log.v(TAG, "stopPreview:finished");
 	}
 
+	public void previewSizeChanged(int width, int height) {
+		if (DEBUG) Log.v(TAG, "previewSizeChanged:");
+		removeMessages(MSG_PREVIEW_SIZE_CHANGED);
+		if (!isPreviewing()) {
+			Message msg = new Message();
+			msg.what = MSG_PREVIEW_SIZE_CHANGED;
+			msg.arg1 = width;
+			msg.arg2 = height;
+			sendMessage(msg);
+		}
+		if (DEBUG) Log.v(TAG, "previewSizeChanged:finished");
+	}
+
 	// 捕获图像
 	protected void captureStill() {
 		checkReleased();
@@ -294,16 +322,6 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 		throw new IllegalStateException();
 	}
 
-	public String getSupportedSize() {
-		checkReleased();
-		final CameraThread thread = mWeakThread.get();
-		final UVCCamera camera = thread != null ? thread.mUVCCamera : null;
-		if (camera != null) {
-			return camera.getSupportedSize();
-		}
-		throw new NullPointerException("Can not find Usb Camera");
-	}
-
 	public int resetValue(final int flag) {
 		checkReleased();
 		final CameraThread thread = mWeakThread.get();
@@ -354,6 +372,9 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 			break;
 		case MSG_SHOW_TOAST:
 			showToast(msg.obj.toString());
+			break;
+		case MSG_PREVIEW_SIZE_CHANGED:
+			thread.handlePreviewSizeChanged(msg.arg1, msg.arg2);
 			break;
 		default:
 			throw new RuntimeException("unsupported message:what=" + msg.what);
@@ -463,10 +484,6 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 			return (mUVCCamera != null) && (mUVCCamera.getDevice() != null) && mUVCCamera.getDevice().equals(device);
 		}
 
-		public String getSupportedSize() {
-			return mUVCCamera.getSupportedSize();
-		}
-
 		public void handleOpen(final USBMonitor.UsbControlBlock ctrlBlock) {
 			if (DEBUG) Log.v(TAG_THREAD, "handleOpen:");
 			handleClose();
@@ -475,6 +492,9 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 				camera.open(ctrlBlock);
 				synchronized (mSync) {
 					mUVCCamera = camera;
+				}
+				if (getHandler() != null && getHandler().supportedSizeListener != null) {
+					getHandler().supportedSizeListener.getSupportedSize(mUVCCamera.getSupportedSize());
 				}
 				callOnOpen();
 			} catch (final Exception e) {
@@ -542,6 +562,17 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 				callOnStopPreview();
 			}
 			if (DEBUG) Log.v(TAG_THREAD, "handleStopPreview:finished");
+		}
+
+		public void handlePreviewSizeChanged(int width, int height) {
+			if (DEBUG) Log.v(TAG_THREAD, "handlePreviewSizeChanged:");
+			if (!mIsPreviewing) {
+				synchronized (mSync) {
+					mWidth = width;
+					mHeight = height;
+				}
+			}
+			if (DEBUG) Log.v(TAG_THREAD, "handlePreviewSizeChanged:finished");
 		}
 
 		// 捕获静态图片
