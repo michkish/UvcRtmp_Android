@@ -294,6 +294,16 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 		throw new IllegalStateException();
 	}
 
+	public String getSupportedSize() {
+		checkReleased();
+		final CameraThread thread = mWeakThread.get();
+		final UVCCamera camera = thread != null ? thread.mUVCCamera : null;
+		if (camera != null) {
+			return camera.getSupportedSize();
+		}
+		throw new NullPointerException("Can not find Usb Camera");
+	}
+
 	public int resetValue(final int flag) {
 		checkReleased();
 		final CameraThread thread = mWeakThread.get();
@@ -451,6 +461,10 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 
 		public boolean isEqual(final UsbDevice device) {
 			return (mUVCCamera != null) && (mUVCCamera.getDevice() != null) && mUVCCamera.getDevice().equals(device);
+		}
+
+		public String getSupportedSize() {
+			return mUVCCamera.getSupportedSize();
 		}
 
 		public void handleOpen(final USBMonitor.UsbControlBlock ctrlBlock) {
