@@ -45,21 +45,17 @@ import com.squareup.otto.Subscribe;
 import org.easydarwin.bus.StartRecord;
 import org.easydarwin.bus.StopRecord;
 import org.easydarwin.bus.StreamStat;
-import org.easydarwin.bus.SupportResolution;
 import org.easydarwin.easyrtmp.push.EasyRTMP;
 import org.easydarwin.model.FormatSizeArray;
 import org.easydarwin.push.EasyPusher;
 import org.easydarwin.push.InitCallback;
 import org.easydarwin.push.UvcMediaStream;
-import org.easydarwin.update.UpdateMgr;
-import org.easydarwin.util.Util;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.easydarwin.easypusher.EasyApplication.BUS;
-import static org.easydarwin.update.UpdateMgr.MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE;
 
 public class StreamActivity extends AppCompatActivity implements View.OnClickListener, CameraViewInterface.Callback, AbstractUVCCameraHandler.GetSupportedSizeListener {
 
@@ -80,7 +76,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     TextView txtStatus, streamStat;
     static Intent mResultIntent;
     static int mResultCode;
-    private UpdateMgr update;
     TextView textRecordTick;
     private BackgroundCameraService mService;
     private ServiceConnection conn;
@@ -116,15 +111,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         BUS.register(this);
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
-            mNeedGrantedPermission = true;
-            return;
-        } else {
-            // resume..
-        }
 
         spnResolution = (Spinner) findViewById(R.id.spn_resolution);
         streamStat = (TextView) findViewById(R.id.stream_stat);
@@ -139,6 +125,16 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         txtStreamAddress = (TextView) findViewById(R.id.txt_stream_address);
         textRecordTick = (TextView) findViewById(R.id.tv_start_record);
         mUVCCameraView = (UVCCameraTextureView) findViewById(R.id.sv_surfaceview);
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
+            mNeedGrantedPermission = true;
+            return;
+        } else {
+            // resume..
+        }
     }
 
     @Override
@@ -213,8 +209,8 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
 
     private void goonWithPermissionGranted() {
-        mUVCCameraView.setCallback(this);
-        mUVCCameraView.setOnClickListener(this);
+        mUVCCameraView.setCallback(StreamActivity.this);
+        mUVCCameraView.setOnClickListener(StreamActivity.this);
 
 
         Button pushScreen = (Button) findViewById(R.id.push_screen);
@@ -240,15 +236,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         if (EasyApplication.isRTMP()) {
             findViewById(R.id.toolbar_about).setVisibility(View.GONE);
         }
-
-        String url = "http://www.easydarwin.org/versions/easypusher/version.txt";
-        if (EasyApplication.isRTMP()) {
-            url = "http://www.easydarwin.org/versions/easyrtmp/version.txt";
-        }
-
-        update = new UpdateMgr(this);
-        update.checkUpdate(url);
-
 
         // create background service for background use.
         Intent intent = new Intent(this, BackgroundCameraService.class);
@@ -326,19 +313,13 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE:
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    update.doDownload();
-                }
-                break;
             case REQUEST_CAMERA_PERMISSION: {
-                if (grantResults.length > 1
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 2
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                        && grantResults[1] == PackageManager.PERMISSION_GRANTED
+                        && grantResults[2] == PackageManager.PERMISSION_GRANTED) {
                     mNeedGrantedPermission = false;
                     goonWithPermissionGranted();
-
                 } else {
                     finish();
                 }
