@@ -277,22 +277,16 @@ public class UvcMediaStream {
         PREVIEW_WIDTH = w;
         PREVIEW_HEIGHT = h;
         frameSize = PREVIEW_WIDTH * PREVIEW_HEIGHT * ImageFormat.getBitsPerPixel(previewFormat) / 8;
-        stopPreview();
         mCameraHandler.previewSizeChanged(PREVIEW_WIDTH, PREVIEW_HEIGHT);
-        double ratio = PREVIEW_WIDTH / (double)PREVIEW_HEIGHT;
-        if (ratio != cameraView.getAspectRatio()) {
-            cameraView.setAspectRatio(ratio);
-        }
+        double oldratio = cameraView.getAspectRatio();
+        double ratio = PREVIEW_WIDTH / (double) PREVIEW_HEIGHT;
+        cameraView.setAspectRatio(ratio);
+        stopPreview();
         closeCamera();
-//        mCameraThreadHandler.post(new Runnable() {
-//            @Override
-//            public void run() {
-//                width = w;
-//                height = h;
-//            }
-//        });
-        openCamera();
-        startPreview();
+        if (ratio == oldratio) {
+            openCamera();
+            startPreview();
+        }
     }
 
 
