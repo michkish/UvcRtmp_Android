@@ -114,7 +114,7 @@ public class UvcMediaStream {
         void onDisConnectDev(UsbDevice device);
     }
 
-    public UvcMediaStream(Activity activity, final UVCCameraTextureView cameraView, final OnMyDevConnectListener listener) {
+    public UvcMediaStream(Activity activity, UVCCameraTextureView cameraView, final OnMyDevConnectListener listener) {
         mApplicationContext = activity.getApplicationContext();
         mSurfaceHolderRef = new WeakReference(cameraView.getSurfaceTexture());
         this.cameraView = cameraView;
@@ -125,8 +125,6 @@ public class UvcMediaStream {
             mEasyPusher = new EasyPusher();
 
         mDgree = 0;
-
-        frameSize = PREVIEW_WIDTH * PREVIEW_HEIGHT * ImageFormat.getBitsPerPixel(previewFormat) / 8;
 
         showToastHandler = new Handler() {
             @Override
@@ -276,13 +274,12 @@ public class UvcMediaStream {
     public void updateResolution(final int w, final int h) {
         PREVIEW_WIDTH = w;
         PREVIEW_HEIGHT = h;
-        frameSize = PREVIEW_WIDTH * PREVIEW_HEIGHT * ImageFormat.getBitsPerPixel(previewFormat) / 8;
+        stopPreview();
+        closeCamera();
         mCameraHandler.previewSizeChanged(PREVIEW_WIDTH, PREVIEW_HEIGHT);
         double oldratio = cameraView.getAspectRatio();
         double ratio = PREVIEW_WIDTH / (double) PREVIEW_HEIGHT;
         cameraView.setAspectRatio(ratio);
-        stopPreview();
-        closeCamera();
         if (ratio == oldratio) {
             openCamera();
             startPreview();
@@ -389,6 +386,8 @@ public class UvcMediaStream {
 //            });
 //            return;
 //        }
+        frameSize = PREVIEW_WIDTH * PREVIEW_HEIGHT * ImageFormat.getBitsPerPixel(previewFormat) / 8;
+
         if (mCameraHandler != null) {
             mCameraHandler.startPreview(cameraView.getSurfaceTexture());
             if (Util.getSupportResolution(mApplicationContext).size() == 0) {

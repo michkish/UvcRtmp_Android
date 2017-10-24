@@ -498,6 +498,7 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 			handleClose();
 			try {
 				final UVCCamera camera = new UVCCamera();
+				camera.setCurrentCameraPreivewSize(mWidth, mHeight);
 				camera.open(ctrlBlock);
 				synchronized (mSync) {
 					mUVCCamera = camera;
