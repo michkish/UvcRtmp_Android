@@ -139,14 +139,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         txtStreamAddress = (TextView) findViewById(R.id.txt_stream_address);
         textRecordTick = (TextView) findViewById(R.id.tv_start_record);
         mUVCCameraView = (UVCCameraTextureView) findViewById(R.id.sv_surfaceview);
-
-/*        listResolution = new ArrayList<>();
-        listResolution.add("1920x1080");
-        listResolution.add("1280x720");
-        listResolution.add("800x480");
-        listResolution.add("680x480");
-
-        initSpninner();*/
     }
 
     @Override
@@ -487,8 +479,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                         showShortMsg("camera not open");
                         return;
                     }
-//                    mMediaStream.stopCameraRecording();
-//                    mMediaStream.startCameraRecording();
 
                     String url = null;
                     if (EasyApplication.isRTMP()) {
@@ -538,8 +528,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                             showShortMsg("camera not open");
                             return;
                         }
-//                        mMediaStream.stopCameraRecording();
-//                        mMediaStream.startCameraRecording();
 
                         String ip = EasyApplication.getEasyApplication().getIp();
                         String port = EasyApplication.getEasyApplication().getPort();
@@ -590,8 +578,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
                     txtStreamAddress.setText(url);
                 } else {
                     mMediaStream.stopStream();
-
-//                    mMediaStream.stopCameraRecording();
 
                     btnSwitch.setText("开始");
                     sendMessage("断开连接");
@@ -661,7 +647,6 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
         if (adapter == null) {
             adapter = new ArrayAdapter<String>(this, R.layout.spn_item, listResolution);
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            showShortMsg("initSpninner: setAdapter");
             try {
                 spnResolution.setAdapter(adapter);
             } catch (IllegalArgumentException e) {
