@@ -223,7 +223,20 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 		if (DEBUG) Log.v(TAG, "previewSizeChanged:");
 		removeMessages(MSG_PREVIEW_SIZE_CHANGED);
 		if (!isPreviewing()) {
-			sendMessage(obtainMessage(MSG_PREVIEW_SIZE_CHANGED, width, height));
+			final CameraThread thread = mWeakThread.get();
+			if (thread == null) return;
+			synchronized (thread.mSync) {
+				sendMessage(obtainMessage(MSG_PREVIEW_SIZE_CHANGED, width, height));
+				if (!isCameraThread()) {
+					// wait for actually preview stopped to avoid releasing Surface/SurfaceTexture
+					// while preview is still running.
+					// therefore this method will take a time to execute
+					try {
+						thread.mSync.wait();
+					} catch (final InterruptedException e) {
+					}
+				}
+			}
 		}
 		if (DEBUG) Log.v(TAG, "previewSizeChanged:finished");
 	}
@@ -566,6 +579,7 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 				synchronized (mSync) {
 					mWidth = width;
 					mHeight = height;
+					mSync.notifyAll();
 				}
 			}
 			if (DEBUG) Log.v(TAG_THREAD, "handlePreviewSizeChanged:finished");

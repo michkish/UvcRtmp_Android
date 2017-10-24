@@ -274,13 +274,16 @@ public class UvcMediaStream {
      * 更新分辨率
      */
     public void updateResolution(final int w, final int h) {
-        stopPreview();
-        closeCamera();
         PREVIEW_WIDTH = w;
         PREVIEW_HEIGHT = h;
         frameSize = PREVIEW_WIDTH * PREVIEW_HEIGHT * ImageFormat.getBitsPerPixel(previewFormat) / 8;
+        stopPreview();
         mCameraHandler.previewSizeChanged(PREVIEW_WIDTH, PREVIEW_HEIGHT);
-        cameraView.setAspectRatio(PREVIEW_WIDTH / (float)PREVIEW_HEIGHT);
+        double ratio = PREVIEW_WIDTH / (double)PREVIEW_HEIGHT;
+        if (ratio != cameraView.getAspectRatio()) {
+            cameraView.setAspectRatio(ratio);
+        }
+        closeCamera();
 //        mCameraThreadHandler.post(new Runnable() {
 //            @Override
 //            public void run() {
