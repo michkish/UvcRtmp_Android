@@ -278,8 +278,9 @@ public class UvcMediaStream {
         closeCamera();
         PREVIEW_WIDTH = w;
         PREVIEW_HEIGHT = h;
-        cameraView.setAspectRatio(PREVIEW_WIDTH / (float)PREVIEW_HEIGHT);
+        frameSize = PREVIEW_WIDTH * PREVIEW_HEIGHT * ImageFormat.getBitsPerPixel(previewFormat) / 8;
         mCameraHandler.previewSizeChanged(PREVIEW_WIDTH, PREVIEW_HEIGHT);
+        cameraView.setAspectRatio(PREVIEW_WIDTH / (float)PREVIEW_HEIGHT);
 //        mCameraThreadHandler.post(new Runnable() {
 //            @Override
 //            public void run() {

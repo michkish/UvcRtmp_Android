@@ -223,11 +223,7 @@ public  abstract class AbstractUVCCameraHandler extends Handler {
 		if (DEBUG) Log.v(TAG, "previewSizeChanged:");
 		removeMessages(MSG_PREVIEW_SIZE_CHANGED);
 		if (!isPreviewing()) {
-			Message msg = new Message();
-			msg.what = MSG_PREVIEW_SIZE_CHANGED;
-			msg.arg1 = width;
-			msg.arg2 = height;
-			sendMessage(msg);
+			sendMessage(obtainMessage(MSG_PREVIEW_SIZE_CHANGED, width, height));
 		}
 		if (DEBUG) Log.v(TAG, "previewSizeChanged:finished");
 	}
