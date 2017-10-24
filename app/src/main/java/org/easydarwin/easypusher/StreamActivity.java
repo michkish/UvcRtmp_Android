@@ -744,7 +744,7 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
 
     @Override
     public void onSurfaceChanged(CameraViewInterface view, Surface surface, int width, int height) {
-        if (!mMediaStream.isStreaming() && !mMediaStream.isCameraOpened()) {
+        if (mMediaStream != null && !mMediaStream.isStreaming() && !mMediaStream.isCameraOpened()) {
             mMediaStream.openCamera();
             mMediaStream.startPreview();
         }
