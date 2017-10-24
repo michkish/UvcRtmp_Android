@@ -88,8 +88,10 @@ public class UvcMediaStream {
 
     private int frameSize;
 
-    private int PREVIEW_WIDTH = 640;
-    private int PREVIEW_HEIGHT = 480;
+//    private int PREVIEW_WIDTH = 640 * 2;
+//    private int PREVIEW_HEIGHT = 480 * 2;
+    private int PREVIEW_WIDTH = 1280;
+    private int PREVIEW_HEIGHT = 720;
     private static final int ENCODER_TYPE = 1;
     private static final int PREVIEW_FORMAT = 1;
 

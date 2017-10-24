@@ -68,7 +68,8 @@ public class StreamActivity extends AppCompatActivity implements View.OnClickLis
     public static final int REQUEST_CAMERA_PERMISSION = 1003;
 
     //默认分辨率
-    private int width = 640, height = 480;
+//    private int width = 640 * 2, height = 480 * 2;
+    private int width = 1280, height = 720;
     Button btnSwitch;
     Button btnSetting;
     TextView txtStreamAddress;
